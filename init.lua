@@ -148,10 +148,15 @@ function SSL:connect()
   return nil
 end
 
--- TODO: implementation.
 --- Accepts the incoming SSL connection.
+--- @return integer | nil
 function SSL:accept()
-  error "not implemented yet"
+  local err = c.wolfSSL_accept()
+  if err ~= SSL_SUCCESS then
+    return self:getError(err)
+  end
+
+  return nil
 end
 
 --- Writes given buffer to the SSL object.
@@ -170,6 +175,18 @@ function SSL:write(buffer, len)
 
   -- success
   return err, nil
+end
+
+-- TLSv1.3 only.
+function SSL:writeEarlyData(buffer, len)
+  local outSz = ffi.new "int[1]"
+
+  local err = c.wolfSSL_write_early_data(self.ssl, buffer, len, outSz)
+  if err ~= SSL_SUCCESS then
+    return nil, self:getError(err)
+  end
+
+  return outSz[0], nil
 end
 
 --- Reads from the SSL object.
