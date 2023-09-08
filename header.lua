@@ -2,10 +2,12 @@ local ffi = require "ffi"
 
 ffi.cdef [[
   // types
-  typedef struct WOLFSSL          WOLFSSL;
-  typedef struct WOLFSSL_SESSION  WOLFSSL_SESSION;
-  typedef struct WOLFSSL_METHOD   WOLFSSL_METHOD;
-  typedef struct WOLFSSL_CTX      WOLFSSL_CTX;
+  typedef struct WOLFSSL            WOLFSSL;
+  typedef struct WOLFSSL_SESSION    WOLFSSL_SESSION;
+  typedef struct WOLFSSL_METHOD     WOLFSSL_METHOD;
+  typedef struct WOLFSSL_CTX        WOLFSSL_CTX;
+  typedef struct WOLFSSL_BIO        WOLFSSL_BIO;
+  typedef struct WOLFSSL_BIO_METHOD WOLFSSL_BIO_METHOD;
 
   int wolfSSL_Init(void);
   int wolfSSL_Cleanup(void);
@@ -94,6 +96,20 @@ ffi.cdef [[
     int fd
   );
 
+  void wolfSSL_set_connect_state(
+    WOLFSSL * ssl
+  );
+
+  void wolfSSL_set_accept_state(
+    WOLFSSL * ssl
+  );
+
+  void wolfSSL_set_bio(
+    WOLFSSL * ssl,
+    WOLFSSL_BIO * rd,
+    WOLFSSL_BIO * wr
+  );
+
   int wolfSSL_connect(
     WOLFSSL * ssl
   );
@@ -117,5 +133,43 @@ ffi.cdef [[
     const void * data,
     int sz,
     int * outSz
+  );
+
+  // BIO functions
+  WOLFSSL_BIO *wolfSSL_BIO_new(
+    WOLFSSL_BIO_METHOD * method
+  );
+
+  WOLFSSL_BIO *wolfSSL_BIO_new_socket(
+    int sfd,
+    int closeF
+  );
+
+  void wolfSSL_BIO_free(
+    WOLFSSL_BIO *
+  );
+
+  WOLFSSL_BIO_METHOD *wolfSSL_BIO_s_socket(
+    void
+  );
+
+  WOLFSSL_BIO_METHOD *wolfSSL_BIO_s_mem(
+    void
+  );
+
+  WOLFSSL_BIO_METHOD *wolfSSL_BIO_f_ssl(
+    void
+  );
+
+  int wolfSSL_BIO_write(
+    WOLFSSL_BIO * bio,
+    const void * data,
+    int len
+  );
+
+  int wolfSSL_BIO_read(
+    WOLFSSL_BIO * bio,
+    void * buf,
+    int len
   );
 ]]

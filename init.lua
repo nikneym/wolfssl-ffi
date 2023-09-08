@@ -3,6 +3,7 @@ require "wolfssl-ffi.header"
 local ffi = require "ffi"
 local c = ffi.load "wolfssl"
 
+-- wrapper types are needed to attach methods via ffi.metatype
 ffi.cdef [[
   typedef struct {
     WOLFSSL_CTX *ctx;
@@ -11,6 +12,10 @@ ffi.cdef [[
   typedef struct {
     WOLFSSL *ssl;
   } ssl_wrapper_t;
+
+  typedef struct {
+    WOLFSSL_BIO *bio;
+  } bio_wrapper_t;
 ]]
 
 local SSL_SUCCESS = 1
@@ -137,6 +142,21 @@ function SSL:setFd(fd)
   return nil
 end
 
+function SSL:setConnectState()
+  c.wolfSSL_set_connect_state(self.ssl)
+end
+
+function SSL:setAcceptState()
+  c.wolfSSL_set_accept_state(self.ssl)
+end
+
+--- comment
+--- @param rb BIO
+--- @param wb BIO
+function SSL:setBIO(rb, wb)
+  c.wolfSSL_set_bio(self.ssl, rb.bio, wb.bio)
+end
+
 --- Handles the TLS handshake for the client-side SSL object.
 --- @return integer | nil
 function SSL:connect()
@@ -237,6 +257,66 @@ local error = {
   -- TODO: add more error codes
 }
 
+--- @class BIO
+--- @field private bio userdata
+local BIO = {}
+BIO.__index = BIO
+
+--- Creates a new BIO object that has socket BIO method.
+--- @return BIO
+function BIO.newSocketBIO()
+  local BIOWrapperType = ffi.typeof "bio_wrapper_t"
+  local mt = ffi.metatype(BIOWrapperType, BIO)
+
+  return mt(c.wolfSSL_BIO_new(c.wolfSSL_BIO_s_socket()))
+end
+
+function BIO.newSocket(sfd)
+  local BIOWrapperType = ffi.typeof "bio_wrapper_t"
+  local mt = ffi.metatype(BIOWrapperType, BIO)
+
+  return mt(c.wolfSSL_BIO_new_socket(sfd, 0))
+end
+
+--- Creates a new BIO object that has memory BIO method.
+--- @return BIO
+function BIO.newMemoryBIO()
+  local BIOWrapperType = ffi.typeof "bio_wrapper_t"
+  local mt = ffi.metatype(BIOWrapperType, BIO)
+
+  return mt(c.wolfSSL_BIO_new(c.wolfSSL_BIO_s_mem()))
+end
+
+--- Creates a new BIO object that has SSL BIO method.
+--- @return BIO
+function BIO.newSSLBIO()
+  local BIOWrapperType = ffi.typeof "bio_wrapper_t"
+  local mt = ffi.metatype(BIOWrapperType, BIO)
+
+  return mt(c.wolfSSL_BIO_new(c.wolfSSL_BIO_f_ssl()))
+end
+
+--- @private
+function BIO:__gc()
+  c.wolfSSL_BIO_free(self.bio)
+end
+
+function BIO:write(buffer, len)
+  len = len or #buffer
+  local err = c.wolfSSL_BIO_write(self.bio, buffer, len)
+
+  print(err)
+end
+
+function BIO:read(len)
+  local buffer = ffi.new("char[?]", len)
+  local err = c.wolfSSL_BIO_read(self.bio, buffer, len)
+
+  if err > 0 then
+    return ffi.string(buffer, err)
+  end
+end
+
 return {
   -- universal
   init = init,
@@ -246,4 +326,7 @@ return {
 
   -- WOLFSSL_CTX API
   Context = Context,
+
+  -- WOLFSSL_BIO API
+  BIO = BIO,
 }
