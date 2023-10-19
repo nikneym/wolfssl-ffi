@@ -42,6 +42,10 @@ ffi.cdef [[
   int wolfSSL_send(WOLFSSL *ssl, const void *data, int sz, int flags);
   int wolfSSL_recv(WOLFSSL *ssl, void *data, int sz, int flags);
 
+  int wolfSSL_SSL_do_handshake(WOLFSSL *ssl);
+
+  int wolfSSL_negotiate(WOLFSSL *ssl);
+
   int wolfSSL_write(
     WOLFSSL * ssl,
     const void * data,
@@ -135,6 +139,13 @@ ffi.cdef [[
     int * outSz
   );
 
+  int wolfSSL_read_early_data(
+    WOLFSSL * ssl,
+    void * data,
+    int sz,
+    int * outSz
+  );
+
   // BIO functions
   WOLFSSL_BIO *wolfSSL_BIO_new(
     WOLFSSL_BIO_METHOD * method
@@ -159,6 +170,10 @@ ffi.cdef [[
 
   WOLFSSL_BIO_METHOD *wolfSSL_BIO_f_ssl(
     void
+  );
+
+  size_t wolfSSL_BIO_ctrl_pending(
+    WOLFSSL_BIO * b
   );
 
   int wolfSSL_BIO_write(

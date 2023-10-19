@@ -154,7 +154,21 @@ end
 --- @param rb BIO
 --- @param wb BIO
 function SSL:setBIO(rb, wb)
-  c.wolfSSL_set_bio(self.ssl, rb.bio, wb.bio)
+  c.wolfSSL_set_bio(self.ssl, rb, wb)
+end
+
+function SSL:doHandshake()
+  local err = c.wolfSSL_SSL_do_handshake(self.ssl)
+  print(self:getError(err))
+
+  return err
+end
+
+function SSL:negotiate()
+  local err = c.wolfSSL_negotiate(self.ssl)
+  print(self:getError(err))
+
+  return err
 end
 
 --- Handles the TLS handshake for the client-side SSL object.
@@ -198,10 +212,24 @@ function SSL:write(buffer, len)
 end
 
 -- TLSv1.3 only.
+-- Only used with clients.
 function SSL:writeEarlyData(buffer, len)
   local outSz = ffi.new "int[1]"
 
   local err = c.wolfSSL_write_early_data(self.ssl, buffer, len, outSz)
+  if err ~= SSL_SUCCESS then
+    return nil, self:getError(err)
+  end
+
+  return outSz[0], nil
+end
+
+-- TLSv1.3 only.
+-- Only used with servers.
+function SSL:readEarlyData(buffer, len)
+  local outSz = ffi.new "int[1]"
+
+  local err = c.wolfSSL_read_early_data(self.ssl, buffer, len, outSz)
   if err ~= SSL_SUCCESS then
     return nil, self:getError(err)
   end
